@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -14,23 +13,27 @@ type User struct {
 	Age   int    `json:"age"`
 }
 
+type Greetings struct {
+	Message string `json:"message"`
+}
+
+func greeter(w http.ResponseWriter, my_greet string, ch chan string) {
+	greet := Greetings{
+		Message: my_greet,
+	}
+	json.NewEncoder(w).Encode(greet)
+	ch <- "Done"
+}
+
 func main() {
 	r := mux.NewRouter()
-
-	r.HandleFunc("/get_user", func(w http.ResponseWriter, r *http.Request) {
-		var user User
-		json.NewDecoder(r.Body).Decode(&user)
-		fmt.Fprintf(w, "%s %s is %d years old", user.Name, user.Email, user.Age)
+	c := make(chan string)
+	r.HandleFunc("/good_greet", func(w http.ResponseWriter, r *http.Request) {
+		go greeter(w, "Hello stranger", c)
 	})
 
-	r.HandleFunc("/add_user", func(w http.ResponseWriter, r *http.Request) {
-		guy := User{
-			Name:  "john",
-			Email: "doe@doe.com",
-			Age:   22,
-		}
-
-		json.NewEncoder(w).Encode(guy)
+	r.HandleFunc("/bad_greet", func(w http.ResponseWriter, r *http.Request) {
+		go greeter(w, "Piss of will ya", c)
 	})
 
 	http.ListenAndServe(":8080", r)
